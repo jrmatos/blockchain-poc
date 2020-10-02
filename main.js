@@ -48,12 +48,12 @@ class Blockchain{
     }
 
     miningPendingTransactions(miningRewardAddress) {
-        const block = new Block(Date.now(), this.pendingTransactions);        
+        const block = new Block(Date.now(), this.pendingTransactions);       
+        block.previousHash = this.getLatestBlock().hash;
+
         block.mineBlock(this.difficulty);
 
         console.log('Block successfully mined');
-
-        // block.previousHash = this.chain[this.chain.length - 1].hash;
 
         this.chain.push(block);
 
@@ -109,13 +109,10 @@ myCoin.createTransaction(new Transaction('address2', 'address1', 50));
 
 console.log('Starting the miner...');
 myCoin.miningPendingTransactions('paulo-address');
-
 console.log('Balance of Paulo is', myCoin.getBalanceOfAddress('paulo-address'));
 
 console.log('Starting the miner again...');
 myCoin.miningPendingTransactions('paulo-address');
-
 console.log('Balance of Paulo is', myCoin.getBalanceOfAddress('paulo-address'));
-
 
 console.log('is valid', myCoin.isChainValid());
