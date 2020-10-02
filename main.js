@@ -1,118 +1,20 @@
-const SHA256 = require('crypto-js/sha256');
+const EC = require('elliptic').ec;
+const { Blockchain, Transaction } = require('./blockchain');
 
-class Transaction{
-    constructor(fromAddress, toAddress, amount) {
-        this.fromAddress = fromAddress;
-        this.toAddress = toAddress;
-        this.amount = amount;
-    }
-}
+const ec = new EC('secp256k1');
 
-class Block{
-    constructor (timestamp, transactions, previousHash = '') {
-        this.timestamp = timestamp;
-        this.transactions = transactions;
-        this.previousHash = previousHash;
-        this.hash = this.calculateHash();
-        this.nonce = 0;
-    }
+const myKey = ec.keyFromPrivate('e6d4bef7752637c9e00d5bc6d519a5b18e664567eafa73c9db74f55f313a7cd8');
+const walletAddress = myKey.getPublic('hex');
 
-    calculateHash() {
-        return SHA256(this.previousHash + this.timestamp + JSON.stringify(this.transactions) + this.nonce).toString();
-    }
+const botoCoin = new Blockchain();
 
-    mineBlock(difficulty) {
-        while (this.hash.substring(0, difficulty) !== Array(difficulty + 1).join('0')) {
-            this.nonce++;
-            this.hash = this.calculateHash();
-        }
+const tx1 = new Transaction(walletAddress, 'public key to other wallet goes here', 10);
 
-        console.log('Block mined', this.hash);
-    }
-}
-
-class Blockchain{
-    constructor () {
-        this.chain = [this.createGenesisBlock()];
-        this.difficulty = 2;
-        this.pendingTransactions = [];
-        this.miningReward = 100;
-    }
-
-    createGenesisBlock() {
-        return new Block('01/10/2020', 'Genesis block', '0');
-    }
-
-    getLatestBlock() {
-        return this.chain[this.chain.length - 1];
-    }
-
-    miningPendingTransactions(miningRewardAddress) {
-        const block = new Block(Date.now(), this.pendingTransactions);       
-        block.previousHash = this.getLatestBlock().hash;
-
-        block.mineBlock(this.difficulty);
-
-        console.log('Block successfully mined');
-
-        this.chain.push(block);
-
-        this.pendingTransactions = [
-            new Transaction(null, miningRewardAddress, this.miningReward)
-        ];
-    }
-
-    createTransaction(transaction) {
-        this.pendingTransactions.push(transaction);
-    }
-
-    getBalanceOfAddress(address) {
-        let balance = 0;
-
-        for (const block of this.chain) {
-            for (const trans of block.transactions) {
-                if (trans.fromAddress === address) {
-                    balance -= trans.amount;
-                }
-
-                if (trans.toAddress === address) {
-                    balance += trans.amount;
-                }
-            }
-        }
-
-        return balance;
-    }
-
-    isChainValid() {
-        for (let i = 1; i < this.chain.length; i++) {
-            const currentBlock = this.chain[i];
-            const previousBlock = this.chain[i - 1];
-
-            // check if something changed in this block
-            if (currentBlock.hash !== currentBlock.calculateHash()) {
-                return false;
-            }
-
-            if (currentBlock.previousHash !== previousBlock.hash) {
-                return false;
-            }
-        }
-
-        return true;
-    }
-}
-
-const myCoin = new Blockchain();
-myCoin.createTransaction(new Transaction('address1', 'address2', 100));
-myCoin.createTransaction(new Transaction('address2', 'address1', 50));
+tx1.signTransaction(myKey);
+botoCoin.addTransaction(tx1);
 
 console.log('Starting the miner...');
-myCoin.miningPendingTransactions('paulo-address');
-console.log('Balance of Paulo is', myCoin.getBalanceOfAddress('paulo-address'));
+botoCoin.minePendingTransactions(walletAddress);
 
-console.log('Starting the miner again...');
-myCoin.miningPendingTransactions('paulo-address');
-console.log('Balance of Paulo is', myCoin.getBalanceOfAddress('paulo-address'));
-
-console.log('is valid', myCoin.isChainValid());
+console.log(`Balance of ${walletAddress} is ${botoCoin.getBalanceOfAddress(walletAddress)}`);
+console.log('Is blockchain valid', botoCoin.isChainValid());
